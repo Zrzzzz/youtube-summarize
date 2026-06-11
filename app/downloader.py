@@ -129,6 +129,7 @@ def _download_with_ytdlp(url: str) -> tuple[Path, str]:
         "noplaylist": True,
         "quiet": True,
         "no_warnings": True,
+        "socket_timeout": 30,
         "js_runtimes": {"deno": {}, "node": {}},
     }
     # 代理、cookies、PO Token 都是为 YouTube 准备的；B 站直连
@@ -213,6 +214,18 @@ def download_audio(url: str) -> tuple[Path, str]:
             except Exception as ytdlp_exc:
                 raise RuntimeError(
                     f"B 站 API 与 yt-dlp 均失败。API: {exc}；yt-dlp: {ytdlp_exc}"
+                ) from ytdlp_exc
+
+    # 无代理环境（如国内服务器）yt-dlp 直连 YouTube 只会卡到超时，Piped 优先
+    if not settings.proxy:
+        try:
+            return _download_with_piped(url)
+        except Exception as piped_exc:
+            try:
+                return _download_with_ytdlp(url)
+            except Exception as ytdlp_exc:
+                raise RuntimeError(
+                    f"Piped 与 yt-dlp 均失败。Piped: {piped_exc}；yt-dlp: {ytdlp_exc}"
                 ) from ytdlp_exc
 
     try:
