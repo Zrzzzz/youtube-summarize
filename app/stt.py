@@ -49,9 +49,9 @@ def _split_audio(mp3_path: Path, work_dir: Path) -> list[Path]:
     return segments
 
 
-def _submit(client: asr_client.AsrClient, audio_bytes: bytes) -> int:
+def _submit(client: asr_client.AsrClient, audio_bytes: bytes, engine: str) -> int:
     req = models.CreateRecTaskRequest()
-    req.EngineModelType = settings.asr_engine_model
+    req.EngineModelType = engine
     req.ChannelNum = 1
     req.ResTextFormat = 0
     req.SourceType = 1  # 本地上传
@@ -76,13 +76,17 @@ def _wait(client: asr_client.AsrClient, task_id: int, timeout: int = 1800, inter
     raise TimeoutError(f"腾讯云识别超时 (TaskId={task_id})")
 
 
-def transcribe(mp3_path: Path) -> str:
-    """整段流程：切片 → 全部提交 → 依次等待 → 拼接纯文本。"""
+def transcribe(mp3_path: Path, engine: str = "") -> str:
+    """整段流程：切片 → 全部提交 → 依次等待 → 拼接纯文本。
+
+    engine 为空时使用 settings.asr_engine_model。
+    """
+    engine = engine or settings.asr_engine_model
     client = _make_client()
     work_dir = Path(tempfile.mkdtemp(prefix="yts_stt_"))
     try:
         segments = _split_audio(mp3_path, work_dir)
-        task_ids = [_submit(client, seg.read_bytes()) for seg in segments]
+        task_ids = [_submit(client, seg.read_bytes(), engine) for seg in segments]
         pieces = [_wait(client, tid) for tid in task_ids]
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)

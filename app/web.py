@@ -21,17 +21,18 @@ _lock = threading.Lock()
 
 
 class CreateTaskRequest(BaseModel):
-    url: str = Field(..., description="YouTube 视频链接")
+    url: str = Field(..., description="YouTube / Bilibili 视频链接")
     email: str = Field("", description="收件邮箱，留空则用 DEFAULT_RECIPIENT；都为空则不发邮件")
+    engine: str = Field("", description="转写引擎，如 16k_zh / 16k_en；留空自动选择")
 
 
-def _run_task(task_id: str, url: str, recipient: str) -> None:
+def _run_task(task_id: str, url: str, recipient: str, engine: str) -> None:
     def on_progress(stage: str) -> None:
         with _lock:
             _tasks[task_id]["stage"] = stage
 
     try:
-        result = pipeline.run(url, recipient, on_progress)
+        result = pipeline.run(url, recipient, on_progress, engine=engine)
         with _lock:
             _tasks[task_id].update(status="done", stage="done", **result)
     except Exception as exc:  # noqa: BLE001 - 后台线程里必须兜住一切异常
@@ -60,7 +61,9 @@ def create_task(req: CreateTaskRequest) -> dict:
             "url": req.url,
             "email": recipient,
         }
-    threading.Thread(target=_run_task, args=(task_id, req.url, recipient), daemon=True).start()
+    threading.Thread(
+        target=_run_task, args=(task_id, req.url, recipient, req.engine), daemon=True
+    ).start()
     return {"task_id": task_id}
 
 

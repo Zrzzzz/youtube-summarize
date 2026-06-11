@@ -12,9 +12,10 @@ def main() -> None:
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     run_p = sub.add_parser("run", help="对单个视频执行 下载→转写→总结→发邮件")
-    run_p.add_argument("url", help="YouTube 视频链接")
+    run_p.add_argument("url", help="YouTube / Bilibili 视频链接")
     run_p.add_argument("--email", default="", help="收件邮箱，默认用 DEFAULT_RECIPIENT")
     run_p.add_argument("--no-email", action="store_true", help="只输出总结，不发邮件")
+    run_p.add_argument("--engine", default="", help="转写引擎（16k_zh/16k_en），留空自动选择")
 
     serve_p = sub.add_parser("serve", help="启动 Web 服务")
     serve_p.add_argument("--host", default="127.0.0.1")
@@ -27,7 +28,9 @@ def main() -> None:
         from app.config import settings
 
         recipient = "" if args.no_email else (args.email or settings.default_recipient)
-        result = pipeline.run(args.url, recipient, on_progress=lambda s: print(f"==> {s}"))
+        result = pipeline.run(
+            args.url, recipient, on_progress=lambda s: print(f"==> {s}"), engine=args.engine
+        )
         print(f"\n标题：{result['title']}\n")
         print(result["summary"])
         if recipient:

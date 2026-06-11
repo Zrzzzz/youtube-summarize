@@ -1,6 +1,6 @@
 # youtube-summarize
 
-输入 YouTube 链接，自动完成：**下载音频 (yt-dlp) → 腾讯云语音转写 → DeepSeek 总结 → 邮件发送（163 SMTP）**，并提供网页调用。
+输入 YouTube 或 Bilibili 链接，自动完成：**下载音频 (yt-dlp) → 腾讯云语音转写 → DeepSeek 总结 → 邮件发送（163 SMTP）**，并提供网页调用。
 
 ## 准备
 
@@ -63,5 +63,6 @@ uv run main.py serve --host 0.0.0.0 --port 8000   # 局域网访问
 - **转写**：腾讯云「录音文件识别」本地上传限制 5MB，所以先用 ffmpeg 压成 16kHz 单声道 32kbps 并按 10 分钟切片，逐片识别后拼接，无需 COS
 - **总结**：DeepSeek（OpenAI 兼容接口），超长转写按 `MAX_TRANSCRIPT_CHARS` 截断
 - **邮件**：163 邮箱 SMTP（SSL 465，授权码登录），Markdown 渲染成 HTML 发送
-- **网络分流**：`PROXY` 只作用于 yt-dlp / Piped 下载；腾讯云 ASR、DeepSeek、163 邮箱均直连国内网络
+- **网络分流**：`PROXY` 只作用于 YouTube 下载（yt-dlp / Piped）；Bilibili 下载、腾讯云 ASR、DeepSeek、163 邮箱均直连国内网络
+- **Bilibili**：yt-dlp 原生支持，直连下载；转写引擎自动选 `16k_zh`（中文）。网页和 CLI（`--engine`）都可手动指定引擎覆盖自动选择
 - **网站**：FastAPI，任务在后台线程执行，前端轮询 `/api/tasks/{id}` 显示进度；任务状态存内存，重启丢失

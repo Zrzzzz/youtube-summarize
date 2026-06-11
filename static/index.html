@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>YouTube 视频总结</title>
+  <title>视频总结</title>
   <style>
     :root { color-scheme: light dark; }
     * { box-sizing: border-box; }
@@ -14,7 +14,7 @@
     }
     h1 { font-size: 1.5rem; }
     form { display: flex; flex-direction: column; gap: 12px; margin: 24px 0; }
-    input {
+    input, select {
       padding: 10px 14px; font-size: 1rem;
       border: 1px solid #8884; border-radius: 8px; background: transparent;
     }
@@ -36,14 +36,19 @@
   </style>
 </head>
 <body>
-  <h1>🎬 YouTube 视频总结</h1>
-  <p>输入视频链接，自动下载音频 → 腾讯云转写 → DeepSeek 总结 → 发送到邮箱。</p>
+  <h1>🎬 视频总结</h1>
+  <p>输入 YouTube 或 Bilibili 链接，自动下载音频 → 腾讯云转写 → DeepSeek 总结 → 发送到邮箱。</p>
 
   <div id="auth" hidden></div>
 
   <form id="form">
-    <input id="url" type="url" placeholder="https://www.youtube.com/watch?v=..." required />
+    <input id="url" type="url" placeholder="https://www.youtube.com/watch?v=... 或 https://www.bilibili.com/video/BV..." required />
     <input id="email" type="email" placeholder="收件邮箱（可留空，使用服务端默认配置）" />
+    <select id="engine">
+      <option value="">语言：自动（B 站中文，其余用服务端默认）</option>
+      <option value="16k_zh">中文（16k_zh）</option>
+      <option value="16k_en">英文（16k_en）</option>
+    </select>
     <button id="submit" type="submit">开始总结</button>
   </form>
 
@@ -91,6 +96,7 @@
           body: JSON.stringify({
             url: document.getElementById("url").value,
             email: document.getElementById("email").value,
+            engine: document.getElementById("engine").value,
           }),
         });
         if (!resp.ok) throw new Error(await resp.text());
