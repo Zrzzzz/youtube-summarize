@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YouTube 视频总结</title>
+  <style>
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+      max-width: 720px; margin: 0 auto; padding: 40px 20px;
+      line-height: 1.6;
+    }
+    h1 { font-size: 1.5rem; }
+    form { display: flex; flex-direction: column; gap: 12px; margin: 24px 0; }
+    input {
+      padding: 10px 14px; font-size: 1rem;
+      border: 1px solid #8884; border-radius: 8px; background: transparent;
+    }
+    button {
+      padding: 10px 14px; font-size: 1rem; font-weight: 600;
+      border: none; border-radius: 8px; cursor: pointer;
+      background: #c4302b; color: #fff;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #status { margin: 16px 0; color: #888; }
+    #status.error { color: #d33; }
+    #auth { padding: 10px 14px; border-radius: 8px; margin: 12px 0; background: #8881; }
+    #auth.warn { background: #f5a62322; }
+    #auth a { color: #c4302b; font-weight: 600; }
+    #summary {
+      white-space: pre-wrap; padding: 16px; border-radius: 8px;
+      background: #8881; display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎬 YouTube 视频总结</h1>
+  <p>输入视频链接，自动下载音频 → 腾讯云转写 → DeepSeek 总结 → 发送到邮箱。</p>
+
+  <div id="auth" hidden></div>
+
+  <form id="form">
+    <input id="url" type="url" placeholder="https://www.youtube.com/watch?v=..." required />
+    <input id="email" type="email" placeholder="收件邮箱（可留空，使用服务端默认配置）" />
+    <button id="submit" type="submit">开始总结</button>
+  </form>
+
+  <div id="status"></div>
+  <div id="summary"></div>
+
+  <script>
+    const STAGE_TEXT = {
+      pending: "排队中…",
+      downloading: "⬇️ 正在下载音频…",
+      transcribing: "🎙 正在语音转写（长视频可能需要几分钟）…",
+      summarizing: "🤖 DeepSeek 正在总结…",
+      emailing: "📮 正在发送邮件…",
+    };
+    const form = document.getElementById("form");
+    const statusEl = document.getElementById("status");
+    const summaryEl = document.getElementById("summary");
+    const submitBtn = document.getElementById("submit");
+    const authEl = document.getElementById("auth");
+
+    (async () => {
+      try {
+        const resp = await fetch("/api/mail/status");
+        const { configured } = await resp.json();
+        authEl.hidden = false;
+        if (configured) {
+          authEl.textContent = "✅ 发件邮箱已配置，可以发送邮件";
+        } else {
+          authEl.className = "warn";
+          authEl.textContent = "⚠️ 未配置发件邮箱（.env 的 SMTP_USER / SMTP_PASS），总结会显示在页面但发不了邮件";
+        }
+      } catch { /* 状态拿不到不影响主流程 */ }
+    })();
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      submitBtn.disabled = true;
+      summaryEl.style.display = "none";
+      statusEl.className = "";
+      statusEl.textContent = "提交任务…";
+      try {
+        const resp = await fetch("/api/tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            url: document.getElementById("url").value,
+            email: document.getElementById("email").value,
+          }),
+        });
+        if (!resp.ok) throw new Error(await resp.text());
+        const { task_id } = await resp.json();
+        await poll(task_id);
+      } catch (err) {
+        statusEl.className = "error";
+        statusEl.textContent = "出错了：" + err.message;
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+
+    async function poll(taskId) {
+      while (true) {
+        const resp = await fetch(`/api/tasks/${taskId}`);
+        const task = await resp.json();
+        if (task.status === "done") {
+          statusEl.textContent = "✅ 完成：" + task.title
+            + (task.email_error ? `（⚠️ 邮件发送失败：${task.email_error}）`
+               : task.email ? `（已发送至 ${task.email}）` : "");
+          summaryEl.textContent = task.summary;
+          summaryEl.style.display = "block";
+          return;
+        }
+        if (task.status === "failed") {
+          statusEl.className = "error";
+          statusEl.textContent = "❌ 失败：" + task.error;
+          return;
+        }
+        statusEl.textContent = STAGE_TEXT[task.stage] || task.stage;
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+    }
+  </script>
+</body>
+</html>
