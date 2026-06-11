@@ -1,0 +1,10 @@
+services:
+  app:
+    build: .
+    container_name: youtube-summarize
+    ports:
+      - "8800:8000"
+    env_file: .env
+    volumes:
+      - ./downloads:/app/downloads
+    restart: unless-stopped

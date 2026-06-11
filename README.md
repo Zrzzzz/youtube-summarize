@@ -55,6 +55,16 @@ uv run main.py serve            # http://127.0.0.1:8000
 uv run main.py serve --host 0.0.0.0 --port 8000   # 局域网访问
 ```
 
+### Docker 部署（推荐用于服务器）
+
+```bash
+cp .env.example .env   # 填好配置
+docker compose up -d --build   # 服务在 8800 端口，重启自动拉起
+```
+
+注意：容器内访问宿主机代理时，`PROXY` 不能写 `127.0.0.1`（macOS/Windows 用
+`http://host.docker.internal:端口`；国内服务器一般直连、不需要代理）。
+
 网页上粘贴视频链接 + 收件邮箱，提交后可实时查看进度，完成后页面直接显示总结，邮箱也会收到一份。
 
 ## 实现说明
