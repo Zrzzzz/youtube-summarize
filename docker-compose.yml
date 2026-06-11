@@ -1,9 +1,13 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      # 宿主机若跑透明代理（fakeip DNS），桥接网络在容器内不通，构建需用 host 网络
+      network: host
     container_name: youtube-summarize
-    ports:
-      - "8800:8000"
+    # 运行也用 host 网络：直接监听宿主机 8800，并复用宿主机的代理/DNS
+    network_mode: host
+    command: ["uv", "run", "--no-sync", "main.py", "serve", "--host", "0.0.0.0", "--port", "8800"]
     env_file: .env
     volumes:
       - ./downloads:/app/downloads
