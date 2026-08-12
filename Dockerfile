@@ -18,7 +18,9 @@ RUN curl -fsSL ${DENO_DL_PROXY:+-x "$DENO_DL_PROXY"} \
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir uv
+# pip / uv 同样走腾讯云 PyPI 镜像（直连 files.pythonhosted.org 会超时）
+ENV UV_DEFAULT_INDEX=https://mirrors.cloud.tencent.com/pypi/simple
+RUN pip install --no-cache-dir -i https://mirrors.cloud.tencent.com/pypi/simple uv
 
 # 先装依赖再拷代码，让依赖层可以缓存
 COPY pyproject.toml uv.lock ./
