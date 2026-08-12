@@ -23,6 +23,13 @@ services:
       - bgutil-provider
     volumes:
       - ./downloads:/app/downloads
+      # 任务结果 / 失败 traceback 落盘（data/tasks.jsonl），容器重建不丢
+      - ./data:/app/data
       # 不加 :ro——yt-dlp 退出时会把轮换后的 cookies 写回，只读挂载会直接报错
       - ./cookies.txt:/app/cookies.txt
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

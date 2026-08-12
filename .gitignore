@@ -13,4 +13,5 @@ wheels/
 .env
 cookies.txt
 downloads/
+data/
 vendor/

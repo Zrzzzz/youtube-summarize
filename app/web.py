@@ -1,7 +1,10 @@
 """第 5 步：FastAPI 网站，提交任务后在后台执行并可轮询进度。"""
 
+import json
 import threading
+import traceback
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -19,6 +22,19 @@ _STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 _tasks: dict[str, dict] = {}
 _lock = threading.Lock()
 
+# 任务结束后把结果追加到 JSONL（挂载到宿主机），容器重建后失败记录仍可查
+_TASK_LOG = Path(__file__).resolve().parent.parent / "data/tasks.jsonl"
+
+
+def _log_task(task_id: str, record: dict) -> None:
+    _TASK_LOG.parent.mkdir(parents=True, exist_ok=True)
+    line = json.dumps(
+        {"task_id": task_id, "time": datetime.now(timezone.utc).astimezone().isoformat(), **record},
+        ensure_ascii=False,
+    )
+    with _lock, open(_TASK_LOG, "a", encoding="utf-8") as f:
+        f.write(line + "\n")
+
 
 class CreateTaskRequest(BaseModel):
     url: str = Field(..., description="YouTube / Bilibili 视频链接")
@@ -35,9 +51,15 @@ def _run_task(task_id: str, url: str, recipient: str, engine: str) -> None:
         result = pipeline.run(url, recipient, on_progress, engine=engine)
         with _lock:
             _tasks[task_id].update(status="done", stage="done", **result)
+        _log_task(task_id, {"status": "done", "url": url, "email": recipient,
+                            "title": result.get("title", "")})
     except Exception as exc:  # noqa: BLE001 - 后台线程里必须兜住一切异常
         with _lock:
+            stage = _tasks[task_id].get("stage", "")
             _tasks[task_id].update(status="failed", error=str(exc))
+        _log_task(task_id, {"status": "failed", "url": url, "email": recipient,
+                            "stage": stage, "error": str(exc),
+                            "traceback": traceback.format_exc()})
 
 
 @app.get("/")
