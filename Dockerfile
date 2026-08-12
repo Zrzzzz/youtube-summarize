@@ -6,9 +6,9 @@ RUN sed -i 's|deb.debian.org|mirrors.cloud.tencent.com|g' /etc/apt/sources.list.
     && apt-get install -y --no-install-recommends ffmpeg curl unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# deno：yt-dlp EJS n-challenge 解密的 JS runtime（apt 的 node 20 版本太老，yt-dlp 标记 unsupported）
+# deno：yt-dlp EJS n-challenge 解密的 JS runtime（yt-dlp 要求 deno>=2.3.0 / node>=22，apt 源都不满足）
 # 国内构建 dl.deno.land 直连极慢，由 compose 传入 DENO_DL_PROXY 走宿主机代理下载
-ARG DENO_VERSION=2.2.0
+ARG DENO_VERSION=2.9.5
 ARG DENO_DL_PROXY
 RUN curl -fsSL ${DENO_DL_PROXY:+-x "$DENO_DL_PROXY"} \
         -o /tmp/deno.zip "https://dl.deno.land/release/v${DENO_VERSION}/deno-x86_64-unknown-linux-gnu.zip" \
