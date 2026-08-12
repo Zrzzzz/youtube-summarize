@@ -130,7 +130,7 @@ def _download_with_ytdlp(url: str) -> tuple[Path, str]:
         "quiet": True,
         "no_warnings": True,
         "socket_timeout": 30,
-        "js_runtimes": {"deno": {}, "node": {}},
+        "js_runtimes": {"deno": {}},
     }
     # 代理、cookies、PO Token 都是为 YouTube 准备的；B 站直连
     if not is_bilibili(url):

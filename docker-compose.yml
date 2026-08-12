@@ -11,6 +11,9 @@ services:
       context: .
       # 宿主机若跑透明代理（fakeip DNS），桥接网络在容器内不通，构建需用 host 网络
       network: host
+      args:
+        # 构建时下载 deno 用的代理（host 网络下可达宿主机 7890）
+        DENO_DL_PROXY: http://127.0.0.1:7890
     container_name: youtube-summarize
     # 运行也用 host 网络：直接监听宿主机 8800，并复用宿主机的代理/DNS
     network_mode: host
