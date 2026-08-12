@@ -20,5 +20,6 @@ services:
       - bgutil-provider
     volumes:
       - ./downloads:/app/downloads
-      - ./cookies.txt:/app/cookies.txt:ro
+      # 不加 :ro——yt-dlp 退出时会把轮换后的 cookies 写回，只读挂载会直接报错
+      - ./cookies.txt:/app/cookies.txt
     restart: unless-stopped
